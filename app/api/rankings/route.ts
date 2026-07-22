@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server"; import { ZodError } from "zod"; import { apiError } from "@/lib/api-response"; import { rankings } from "@/lib/database/research"; import { rankingsQuerySchema } from "@/lib/validation/research";
+export async function GET(request: Request) { try { const query = rankingsQuerySchema.parse(Object.fromEntries(new URL(request.url).searchParams)); return NextResponse.json({ data: await rankings(query) }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } }); } catch (error) { return error instanceof ZodError ? apiError("INVALID_QUERY", "Invalid ranking query.", 400, error.flatten().fieldErrors) : apiError("RANKINGS_UNAVAILABLE", "Stored rankings are unavailable.", 503); } }
+

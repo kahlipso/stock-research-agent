@@ -1,72 +1,32 @@
-import { WatchlistTable, type WatchlistRow } from "@/components/dashboard/watchlist-table";
-import { DataBanner } from "@/components/ui/mock-banner";
-import { APP_NAME } from "@/lib/config/app";
-import { getStockResearchData } from "@/lib/data-providers";
-import { MOCK_COMPANIES, MOCK_META } from "@/lib/data-providers/mock-data";
+import { SystematicRankingTable } from "@/components/dashboard/systematic-ranking-table";
 import { databaseConfigured } from "@/lib/database/prisma";
-import { listWatchlistTickers } from "@/lib/database/watchlist";
-import { rankByResearchScore } from "@/lib/ranking/watchlist";
-import { scoreStock } from "@/lib/scoring/from-stock";
+import { rankings, systemStatus } from "@/lib/database/research";
+import { MODEL_V0 } from "@/lib/research/config";
 
 export const dynamic = "force-dynamic";
-
-async function buildWatchlistRow(ticker: string): Promise<WatchlistRow> {
-  const data = await getStockResearchData(ticker);
-  const latest = data.financials[0]; const prior = data.financials[1]; const score = scoreStock(data);
-  return {
-    ticker, name: data.profile.name, sector: data.profile.sector,
-    currentPrice: data.market.currentPrice, previousClose: data.market.previousClose,
-    dailyChangeAmount: data.market.dailyChangeAmount, dailyChangePercent: data.market.dailyChangePercent,
-    marketStatus: data.market.marketStatus, priceTimestamp: data.market.priceTimestamp,
-    dataType: data.market.dataType, isMock: data.market.isMock, source: data.market.source,
-    marketCap: data.market.marketCap,
-    revenueGrowth: latest?.revenueGrowth ?? (latest?.revenue && prior?.revenue ? latest.revenue / prior.revenue - 1 : null),
-    fcfMargin: latest?.freeCashFlow && latest?.revenue ? latest.freeCashFlow / latest.revenue : null,
-    forwardPE: data.valuation.forwardPE,
-    distanceHigh: data.market.currentPrice && data.market.fiftyTwoWeekHigh ? data.market.currentPrice / data.market.fiftyTwoWeekHigh - 1 : null,
-    totalScore: score.totalScore, growthScore: score.categories.growth.score,
-    profitabilityScore: score.categories.profitability.score, balanceSheetScore: score.categories.balanceSheet.score,
-    valuationScore: score.categories.valuation.score, priceTrendScore: score.categories.priceTrend.score,
-    dataCompletenessScore: score.categories.dataCompleteness.score, scoreBreakdown: score,
-    updatedAt: data.market.retrievedAt, missing: score.missingFields,
-  };
-}
+const defaultQuery = { page: 1, pageSize: 25 };
 
 export default async function DashboardPage() {
-  let tickers = MOCK_COMPANIES.map((item) => item.ticker);
   const dbReady = databaseConfigured();
+  const unavailableStatus = { status: "DATABASE_UNAVAILABLE", migrationPending: true, model: null, latestRun: null, latestScore: null, universe: null };
+  const unavailableResult: Awaited<ReturnType<typeof rankings>> = { rows: [], total: 0, model: null };
+  let status: Awaited<ReturnType<typeof systemStatus>> | typeof unavailableStatus = unavailableStatus;
+  let result: Awaited<ReturnType<typeof rankings>> = unavailableResult;
   if (dbReady) {
-    try { const stored = await listWatchlistTickers(); if (stored.length) tickers = stored; }
-    catch { /* Provider data can still render when the watchlist database is temporarily unavailable. */ }
+    try { [status, result] = await Promise.all([systemStatus(), rankings(defaultQuery)]); }
+    catch { status = unavailableStatus; result = unavailableResult; }
   }
-
-  const rows: WatchlistRow[] = []; const failures: string[] = [];
-  for (let index = 0; index < tickers.length; index += 3) {
-    const batch = tickers.slice(index, index + 3);
-    const results = await Promise.allSettled(batch.map(buildWatchlistRow));
-    results.forEach((result, resultIndex) => {
-      if (result.status === "fulfilled") rows.push(result.value);
-      else failures.push(batch[resultIndex]);
-    });
-  }
-
-  const rankedRows = rankByResearchScore(rows);
-  const average = rankedRows.length ? rankedRows.reduce((sum, row) => sum + row.totalScore, 0) / rankedRows.length : 0;
-  const latestUpdate = rankedRows.reduce((latest, row) => row.updatedAt > latest ? row.updatedAt : latest, rankedRows[0]?.updatedAt ?? MOCK_META.retrievedAt);
+  const rows = result.rows;
+  const averageConfidence = rows.length ? rows.reduce((sum, row) => sum + (row.confidence ?? 0), 0) / rows.length : 0;
   const summary = [
-    { label: "Stocks tracked", value: String(rankedRows.length) },
-    { label: "Highest ranked under current research metrics", value: rankedRows[0]?.ticker ?? "None" },
-    { label: "Average research score", value: average.toFixed(1) },
-    { label: "Scoring at least 80", value: String(rankedRows.filter((row) => row.totalScore >= 80).length) },
-    { label: "Incomplete data", value: String(rankedRows.filter((row) => row.missing.length > 0).length) },
-    { label: "Last dashboard update", value: `${new Date(latestUpdate).toLocaleString("en-US", { timeZone: "UTC", dateStyle: "short", timeStyle: "short" })} UTC` },
+    ["Eligible universe", String(status.universe ? result.total : 0)], ["Securities scored", String(result.total)],
+    ["Candidates", String(rows.filter((row) => row.band === "CANDIDATE").length)], ["Average confidence", rows.length ? `${averageConfidence.toFixed(0)} / 100` : "—"],
+    ["Latest ingestion", status.latestRun?.completedAt?.toISOString() ?? "Not completed"], ["Latest calculation", status.latestScore?.calculatedAt.toISOString() ?? "Not calculated"],
   ];
-
-  return <main className="mx-auto max-w-[1500px] space-y-6 px-4 py-8 sm:px-6">
-    <div><p className="text-sm font-semibold text-[var(--accent)]">PERSONAL RESEARCH WORKSPACE</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{APP_NAME}</h1><p className="mt-2 max-w-3xl text-[var(--muted)]">Compare companies with transparent deterministic scores. Scores organize research and do not predict future returns.</p></div>
-    <DataBanner source={rankedRows[0]?.source ?? MOCK_META.source} retrievedAt={latestUpdate} isMock={rankedRows[0]?.isMock ?? true} />
-    {failures.length > 0 && <div role="alert" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm"><strong>Some external data was unavailable:</strong> {failures.join(", ")}. These companies were omitted rather than filled with mock values.</div>}
-    <section aria-label="Dashboard summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">{summary.map((item) => <div key={item.label} className="panel p-4"><p className="text-xs text-[var(--muted)]">{item.label}</p><p className="mt-1 font-semibold">{item.value}</p></div>)}</section>
-    <WatchlistTable initialRows={rankedRows} databaseReady={dbReady} />
+  return <main className="mx-auto max-w-[1700px] space-y-5 px-4 py-8 sm:px-6">
+    <header><p className="text-sm font-semibold text-[var(--accent)]">SYSTEMATIC EQUITY RESEARCH</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Systematic Equity Research</h1><dl className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm muted"><div><dt className="inline font-medium text-[var(--foreground)]">Model: </dt><dd className="inline">{status.model?.modelKey ?? MODEL_V0.modelKey} {status.model?.version ?? "pending"}</dd></div><div><dt className="inline font-medium text-[var(--foreground)]">Target horizon: </dt><dd className="inline">{MODEL_V0.horizon}</dd></div><div><dt className="inline font-medium text-[var(--foreground)]">Universe: </dt><dd className="inline">{status.universe?.name ?? "Not initialized"}</dd></div><div><dt className="inline font-medium text-[var(--foreground)]">Data as of: </dt><dd className="inline">{status.latestScore?.dataAsOf.toISOString() ?? "Unavailable"}</dd></div><div><dt className="inline font-medium text-[var(--foreground)]">Scores calculated: </dt><dd className="inline">{status.latestScore?.calculatedAt.toISOString() ?? "Unavailable"}</dd></div></dl></header>
+    <div role="status" className={`rounded-xl border p-4 text-sm ${rows.length ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}><strong>{rows.length ? "Stored real-data rankings" : "Institutional model migration pending"}.</strong> {rows.length ? "Only non-mock, point-in-time factor snapshots are shown." : "No production ranking is displayed until real ingestion and factor calculation complete. Fixture rankings are blocked here."}</div>
+    <section aria-label="Research system summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">{summary.map(([label, value]) => <div key={label} className="panel p-3"><p className="text-xs muted">{label}</p><p className="mt-1 truncate text-sm font-semibold" title={value}>{value}</p></div>)}</section>
+    <SystematicRankingTable initialRows={rows} />
   </main>;
 }

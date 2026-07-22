@@ -1,0 +1,3 @@
+# Known limitations
+
+The current market feed is unofficial/delayed. Its initial ingestion preserves adjusted closes but not full historical OHLC/corporate-action payloads (OHLC is conservatively stored at the adjusted close), so it is not yet suitable for range/ATR research. SEC company-fact taxonomy mapping and deduplication require production hardening. Fundamentals, feature, and factor worker commands fail closed pending completion. Earnings revisions, sector benchmarks, earnings-gap history, idiosyncratic volatility, analysis generation, backtesting, paper trading, and all execution are deferred. No historical factor history is fabricated.

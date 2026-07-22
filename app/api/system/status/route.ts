@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server"; import { databaseConfigured } from "@/lib/database/prisma"; import { systemStatus } from "@/lib/database/research";
+export async function GET() { if (!databaseConfigured()) return NextResponse.json({ data: { status: "DATABASE_UNAVAILABLE", migrationPending: true } }, { status: 503 }); try { return NextResponse.json({ data: await systemStatus() }); } catch { return NextResponse.json({ data: { status: "DATABASE_UNAVAILABLE", migrationPending: true } }, { status: 503 }); } }

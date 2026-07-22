@@ -43,7 +43,7 @@ async function loadHistory(ticker: string, range: PriceRange) {
     includePrePost: options.includePrePost, return: "array",
   });
   const points = result.quotes.flatMap((quote) => quote.close === null ? [] : [{
-    source: SOURCE, retrievedAt, isMock: false, timestamp: quote.date.toISOString(), price: quote.close,
+    source: SOURCE, retrievedAt, isMock: false, timestamp: quote.date.toISOString(), price: quote.adjclose ?? quote.close,
   }]);
   return pricePointSchema.array().parse(normalizePriceHistory(points));
 }

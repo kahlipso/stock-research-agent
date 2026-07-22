@@ -29,19 +29,40 @@ enum MarketStatus {
 }
 
 model Company {
-  id                 String              @id @default(cuid())
-  ticker             String              @unique
-  name               String
-  sector             String
-  industry           String
-  description        String              @db.Text
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  watchlistItem      WatchlistItem?
-  marketSnapshots    MarketSnapshot[]
-  financialPeriods   FinancialPeriod[]
-  valuationSnapshots ValuationSnapshot[]
-  researchScores     ResearchScore[]
+  id                  String                      @id @default(cuid())
+  ticker              String                      @unique
+  name                String
+  sector              String
+  industry            String
+  description         String                      @db.Text
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  watchlistItem       WatchlistItem?
+  marketSnapshots     MarketSnapshot[]
+  financialPeriods    FinancialPeriod[]
+  valuationSnapshots  ValuationSnapshot[]
+  researchScores      ResearchScore[]
+  exchange            String?
+  country             String?
+  currency            String?
+  securityType        String?
+  cik                 String?
+  active              Boolean                     @default(true)
+  delistedAt          DateTime?
+  universeMemberships UniverseMembership[]
+  priceBars           PriceBar[]
+  corporateActions    CorporateAction[]
+  filings             Filing[]
+  financialFacts      FinancialFact[]
+  featureSnapshots    FeatureSnapshot[]
+  normalizedFeatures  NormalizedFeatureSnapshot[]
+  factorScores        FactorScoreSnapshot[]
+  riskSnapshots       RiskMetricSnapshot[]
+  liquiditySnapshots  LiquiditySnapshot[]
+  analyses            AnalysisRecord[]
+
+  @@index([sector])
+  @@index([industry])
 }
 
 model WatchlistItem {
@@ -55,23 +76,24 @@ model WatchlistItem {
 }
 
 model MarketSnapshot {
-  id                       String   @id @default(cuid())
-  companyId                String
-  timestamp                DateTime
-  price                    Decimal? @db.Decimal(18, 4)
-  previousClose            Decimal? @db.Decimal(18, 4)
-  currentPrice             Decimal? @db.Decimal(18, 4)
-  dailyChangeAmount        Decimal? @db.Decimal(18, 4)
-  dailyChangePercent       Decimal? @db.Decimal(12, 8)
-  marketStatus             MarketStatus @default(UNKNOWN)
-  priceTimestamp           DateTime
-  marketCap                Decimal? @db.Decimal(24, 2)
-  volume                   BigInt?
-  fiftyTwoWeekHigh         Decimal? @db.Decimal(18, 4)
-  fiftyTwoWeekLow          Decimal? @db.Decimal(18, 4)
-  fiftyDayMovingAverage    Decimal? @db.Decimal(18, 4)
-  twoHundredDayMovingAverage Decimal? @db.Decimal(18, 4)
-  company                  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id                         String       @id @default(cuid())
+  companyId                  String
+  timestamp                  DateTime
+  price                      Decimal?     @db.Decimal(18, 4)
+  previousClose              Decimal?     @db.Decimal(18, 4)
+  currentPrice               Decimal?     @db.Decimal(18, 4)
+  dailyChangeAmount          Decimal?     @db.Decimal(18, 4)
+  dailyChangePercent         Decimal?     @db.Decimal(12, 8)
+  marketStatus               MarketStatus @default(UNKNOWN)
+  priceTimestamp             DateTime
+  marketCap                  Decimal?     @db.Decimal(24, 2)
+  volume                     BigInt?
+  fiftyTwoWeekHigh           Decimal?     @db.Decimal(18, 4)
+  fiftyTwoWeekLow            Decimal?     @db.Decimal(18, 4)
+  fiftyDayMovingAverage      Decimal?     @db.Decimal(18, 4)
+  twoHundredDayMovingAverage Decimal?     @db.Decimal(18, 4)
+  company                    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@index([companyId, timestamp])
 }
 
@@ -93,6 +115,7 @@ model FinancialPeriod {
   source            String
   retrievedAt       DateTime
   company           Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@unique([companyId, periodEnd, periodType])
 }
 
@@ -106,6 +129,7 @@ model ValuationSnapshot {
   priceToFreeCashFlow Decimal? @db.Decimal(18, 4)
   evToEbitda          Decimal? @db.Decimal(18, 4)
   company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@index([companyId, timestamp])
 }
 
@@ -121,6 +145,280 @@ model ResearchScore {
   dataCompletenessScore Decimal  @db.Decimal(6, 2)
   totalScore            Decimal  @db.Decimal(6, 2)
   explanation           Json
+  isMock                Boolean  @default(true)
+  legacy                Boolean  @default(true)
   company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@index([companyId, calculatedAt])
+}
+
+model InvestmentUniverse {
+  id          String               @id @default(cuid())
+  name        String               @unique
+  description String?
+  modelKey    String?
+  active      Boolean              @default(true)
+  ruleVersion String
+  rules       Json
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  memberships UniverseMembership[]
+}
+
+model UniverseMembership {
+  id            String             @id @default(cuid())
+  universeId    String
+  companyId     String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  source        String
+  retrievedAt   DateTime
+  universe      InvestmentUniverse @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, companyId, effectiveFrom])
+  @@index([universeId, effectiveFrom, effectiveTo])
+}
+
+model PriceBar {
+  id               String    @id @default(cuid())
+  companyId        String
+  timestamp        DateTime
+  interval         String
+  open             Decimal   @db.Decimal(20, 6)
+  high             Decimal   @db.Decimal(20, 6)
+  low              Decimal   @db.Decimal(20, 6)
+  close            Decimal   @db.Decimal(20, 6)
+  adjustedClose    Decimal?  @db.Decimal(20, 6)
+  volume           BigInt?
+  provider         String
+  sourceIdentifier String?
+  retrievedAt      DateTime
+  effectiveAt      DateTime?
+  isMock           Boolean   @default(false)
+  rawResponse      Json?
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, timestamp, interval, provider])
+  @@index([companyId, timestamp])
+}
+
+model CorporateAction {
+  id               String    @id @default(cuid())
+  companyId        String
+  actionType       String
+  effectiveDate    DateTime
+  ratio            Decimal?  @db.Decimal(20, 8)
+  cashAmount       Decimal?  @db.Decimal(20, 6)
+  provider         String
+  sourceIdentifier String?
+  retrievedAt      DateTime
+  publishedAt      DateTime?
+  isMock           Boolean   @default(false)
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, actionType, effectiveDate, provider])
+  @@index([companyId, effectiveDate])
+}
+
+model Filing {
+  id              String          @id @default(cuid())
+  companyId       String
+  accessionNumber String          @unique
+  formType        String
+  filingDate      DateTime
+  periodEnd       DateTime?
+  acceptedAt      DateTime?
+  sourceUrl       String?
+  provider        String
+  retrievedAt     DateTime
+  isMock          Boolean         @default(false)
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  facts           FinancialFact[]
+
+  @@index([companyId, filingDate])
+}
+
+model FinancialFact {
+  id               String    @id @default(cuid())
+  companyId        String
+  filingId         String?
+  metricKey        String
+  value            Decimal   @db.Decimal(30, 8)
+  unit             String
+  periodStart      DateTime?
+  periodEnd        DateTime
+  publishedAt      DateTime
+  fiscalYear       Int?
+  fiscalQuarter    String?
+  periodType       String
+  provider         String
+  sourceIdentifier String?
+  retrievedAt      DateTime
+  isRestated       Boolean   @default(false)
+  isMock           Boolean   @default(false)
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  filing           Filing?   @relation(fields: [filingId], references: [id])
+
+  @@unique([companyId, metricKey, periodEnd, publishedAt, provider])
+  @@index([companyId, metricKey, periodEnd])
+  @@index([publishedAt])
+}
+
+model FeatureSnapshot {
+  id           String    @id @default(cuid())
+  companyId    String
+  asOfDate     DateTime
+  featureKey   String
+  value        Decimal?  @db.Decimal(30, 10)
+  modelVersion String
+  calculatedAt DateTime
+  sourceAsOf   DateTime?
+  confidence   Decimal?  @db.Decimal(6, 4)
+  metadata     Json?
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, asOfDate, featureKey, modelVersion])
+  @@index([featureKey, asOfDate])
+}
+
+model NormalizedFeatureSnapshot {
+  id              String   @id @default(cuid())
+  companyId       String
+  asOfDate        DateTime
+  featureKey      String
+  modelVersion    String
+  rawValue        Decimal  @db.Decimal(30, 10)
+  winsorizedValue Decimal  @db.Decimal(30, 10)
+  normalizedValue Decimal  @db.Decimal(18, 10)
+  percentileRank  Decimal  @db.Decimal(8, 6)
+  peerGroupType   String
+  peerGroupValue  String?
+  peerGroupSize   Int
+  direction       String
+  calculatedAt    DateTime
+  metadata        Json?
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, asOfDate, featureKey, modelVersion])
+  @@index([featureKey, asOfDate])
+}
+
+model FactorModelVersion {
+  id            String                @id @default(cuid())
+  modelKey      String
+  version       String
+  name          String
+  horizon       String
+  weights       Json
+  configuration Json
+  active        Boolean               @default(false)
+  createdAt     DateTime              @default(now())
+  scores        FactorScoreSnapshot[]
+
+  @@unique([modelKey, version])
+}
+
+model FactorScoreSnapshot {
+  id                   String             @id @default(cuid())
+  companyId            String
+  asOfDate             DateTime
+  modelVersionId       String
+  universeRuleVersion  String
+  qualityScore         Decimal?           @db.Decimal(8, 4)
+  valueScore           Decimal?           @db.Decimal(8, 4)
+  growthScore          Decimal?           @db.Decimal(8, 4)
+  revisionScore        Decimal?           @db.Decimal(8, 4)
+  momentumScore        Decimal?           @db.Decimal(8, 4)
+  alphaScore           Decimal?           @db.Decimal(8, 4)
+  confidenceScore      Decimal?           @db.Decimal(8, 4)
+  riskScore            Decimal?           @db.Decimal(8, 4)
+  liquidityScore       Decimal?           @db.Decimal(8, 4)
+  universePercentile   Decimal?           @db.Decimal(8, 6)
+  industryPercentile   Decimal?           @db.Decimal(8, 6)
+  sectorPercentile     Decimal?           @db.Decimal(8, 6)
+  candidateBand        String
+  calculatedAt         DateTime
+  dataAsOf             DateTime
+  priceAsOf            DateTime?
+  featureContributions Json
+  factorContributions  Json
+  effectiveWeights     Json
+  warnings             Json?
+  isMock               Boolean            @default(false)
+  company              Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  modelVersion         FactorModelVersion @relation(fields: [modelVersionId], references: [id])
+
+  @@unique([companyId, asOfDate, modelVersionId])
+  @@index([asOfDate, alphaScore])
+}
+
+model RiskMetricSnapshot {
+  id                 String   @id @default(cuid())
+  companyId          String
+  asOfDate           DateTime
+  modelVersion       String
+  volatility20d      Decimal? @db.Decimal(18, 10)
+  volatility60d      Decimal? @db.Decimal(18, 10)
+  volatility252d     Decimal? @db.Decimal(18, 10)
+  downsideVolatility Decimal? @db.Decimal(18, 10)
+  betaSpy            Decimal? @db.Decimal(18, 10)
+  maximumDrawdown    Decimal? @db.Decimal(18, 10)
+  atrPercent         Decimal? @db.Decimal(18, 10)
+  gapRisk            Decimal? @db.Decimal(18, 10)
+  riskScore          Decimal? @db.Decimal(8, 4)
+  classification     String
+  calculatedAt       DateTime
+  company            Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, asOfDate, modelVersion])
+}
+
+model LiquiditySnapshot {
+  id                       String   @id @default(cuid())
+  companyId                String
+  asOfDate                 DateTime
+  medianDollarVolume       Decimal? @db.Decimal(30, 4)
+  averageDailyVolume       Decimal? @db.Decimal(30, 4)
+  estimatedDaysToLiquidate Decimal? @db.Decimal(18, 8)
+  price                    Decimal? @db.Decimal(20, 6)
+  tradingHistoryDays       Int
+  missingBarCount          Int
+  liquidityScore           Decimal? @db.Decimal(8, 4)
+  classification           String
+  calculatedAt             DateTime
+  company                  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, asOfDate])
+}
+
+model DataIngestionRun {
+  id             String    @id @default(cuid())
+  jobType        String
+  provider       String
+  startedAt      DateTime
+  completedAt    DateTime?
+  status         String
+  recordsRead    Int       @default(0)
+  recordsWritten Int       @default(0)
+  recordsFailed  Int       @default(0)
+  errorSummary   String?
+  metadata       Json?
+
+  @@index([jobType, startedAt])
+}
+
+model AnalysisRecord {
+  id          String    @id @default(cuid())
+  companyId   String
+  summary     String    @db.Text
+  provider    String
+  model       String?
+  generatedAt DateTime
+  dataAsOf    DateTime
+  staleAt     DateTime?
+  metadata    Json?
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, generatedAt])
 }

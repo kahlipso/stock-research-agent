@@ -12,7 +12,11 @@
     "test:watch": "vitest --root . tests",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx --env-file=.env.local prisma/seed.ts",
+    "ingest:prices": "tsx --env-file=.env.local scripts/research.ts prices",
+    "ingest:fundamentals": "tsx --env-file=.env.local scripts/research.ts fundamentals",
+    "calculate:features": "tsx --env-file=.env.local scripts/research.ts features",
+    "calculate:factors": "tsx --env-file=.env.local scripts/research.ts factors"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",
