@@ -61,6 +61,11 @@ export function mockFinancials(company: MockCompany): FinancialPeriodData[] {
       freeCashFlow: revenue * company.fcfMargin, cash: company.cash * (1 - yearsAgo * .04),
       debt: company.debt * (1 + yearsAgo * .03), sharesOutstanding: company.marketCap / company.price,
       grossMargin: company.grossMargin, operatingMargin: company.operatingMargin, netMargin: company.netMargin,
+      revenueGrowth: yearsAgo === 0 ? company.revenueGrowth : null,
+      earningsGrowth: yearsAgo === 0 ? company.earningsGrowth : null,
+      freeCashFlowGrowth: yearsAgo === 0 ? company.fcfGrowth : null,
+      currentRatio: yearsAgo === 0 ? company.currentRatio : null,
+      returnOnInvestedCapital: yearsAgo === 0 ? company.roic : null,
     };
   });
 }

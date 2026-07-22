@@ -1,8 +1,8 @@
 import { MOCK_COMPANIES, MOCK_META, mockFinancials } from "./mock-data";
 import type { MarketDataProvider, PriceRange } from "./types";
-import { calculateDailyChange } from "@/lib/market/daily-change";
-import { normalizePriceHistory } from "@/lib/market/price-history";
-import { companyProfileSchema, financialPeriodSchema, marketSnapshotSchema, pricePointSchema, valuationSchema } from "@/lib/validation/provider";
+import { calculateDailyChange } from "../market/daily-change";
+import { normalizePriceHistory } from "../market/price-history";
+import { companyProfileSchema, financialPeriodSchema, marketSnapshotSchema, pricePointSchema, valuationSchema } from "../validation/provider";
 
 const rangeSettings: Record<PriceRange, { points: number; intervalMinutes: number }> = {
   "1D": { points: 14, intervalMinutes: 30 }, "5D": { points: 20, intervalMinutes: 360 },

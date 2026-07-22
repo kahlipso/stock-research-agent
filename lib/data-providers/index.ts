@@ -1,4 +1,4 @@
-import { marketDataProvider } from "./mock-provider";
+import { marketDataProvider } from "./provider";
 import type { PriceRange, StockResearchData } from "./types";
 
 export async function getStockResearchData(ticker: string, range: PriceRange = "1Y"): Promise<StockResearchData> {
@@ -10,3 +10,4 @@ export async function getStockResearchData(ticker: string, range: PriceRange = "
   return { profile, market, prices, financials, valuation };
 }
 export * from "./types";
+export { configuredProviderName, getMarketDataProvider, marketDataProvider } from "./provider";

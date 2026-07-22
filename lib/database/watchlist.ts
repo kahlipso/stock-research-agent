@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { marketDataProvider } from "@/lib/data-providers/mock-provider";
+import { marketDataProvider } from "@/lib/data-providers";
 
 export async function listWatchlistTickers() {
   const items = await prisma.watchlistItem.findMany({ include: { company: true }, orderBy: { addedAt: "asc" } });

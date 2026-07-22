@@ -22,6 +22,8 @@ export type FinancialPeriodData = DataProvenance & {
   freeCashFlow: number | null; cash: number | null; debt: number | null;
   sharesOutstanding: number | null; grossMargin: number | null;
   operatingMargin: number | null; netMargin: number | null;
+  revenueGrowth: number | null; earningsGrowth: number | null; freeCashFlowGrowth: number | null;
+  currentRatio: number | null; returnOnInvestedCapital: number | null;
 };
 export type ValuationData = DataProvenance & {
   ticker: string; trailingPE: number | null; forwardPE: number | null;

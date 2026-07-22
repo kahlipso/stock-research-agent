@@ -23,7 +23,9 @@ export const financialPeriodSchema = z.object({
   ...provenance, ticker: z.string().min(1), periodEnd: z.string().min(1), periodType: z.enum(["ANNUAL", "QUARTERLY"]),
   revenue: nullableFinite, operatingIncome: nullableFinite, netIncome: nullableFinite, freeCashFlow: nullableFinite,
   cash: nullableFinite, debt: nullableFinite, sharesOutstanding: nullableFinite, grossMargin: nullableFinite,
-  operatingMargin: nullableFinite, netMargin: nullableFinite,
+  operatingMargin: nullableFinite, netMargin: nullableFinite, revenueGrowth: nullableFinite,
+  earningsGrowth: nullableFinite, freeCashFlowGrowth: nullableFinite, currentRatio: nullableFinite,
+  returnOnInvestedCapital: nullableFinite,
 });
 export const valuationSchema = z.object({
   ...provenance, ticker: z.string().min(1), trailingPE: nullableFinite, forwardPE: nullableFinite,

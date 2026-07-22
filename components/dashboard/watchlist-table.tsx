@@ -11,7 +11,7 @@ import { APP_NAME } from "@/lib/config/app";
 export type WatchlistRow = {
   ticker: string; name: string; sector: string; currentPrice: number | null; previousClose: number | null;
   dailyChangeAmount: number | null; dailyChangePercent: number | null; marketStatus: MarketStatus;
-  priceTimestamp: string; dataType: "MOCK" | "DELAYED" | "LIVE"; isMock: boolean;
+  priceTimestamp: string; dataType: "MOCK" | "DELAYED" | "LIVE"; isMock: boolean; source: string;
   marketCap: number | null; revenueGrowth: number | null; fcfMargin: number | null;
   forwardPE: number | null; distanceHigh: number | null; totalScore: number; growthScore: number;
   profitabilityScore: number; balanceSheetScore: number; valuationScore: number;
@@ -70,7 +70,7 @@ export function WatchlistTable({ initialRows, databaseReady }: { initialRows: Wa
       <th className="p-3">Rank</th><th className="p-3">Ticker</th><th className="p-3">Company</th>{sortableHeaders.map(([label, key]) => <th key={key} className="p-3"><button className="focus-ring rounded text-left hover:text-[var(--accent)]" onClick={() => chooseSort(key)} aria-label={`Sort by ${label}`}>{label}{sort === key ? (ascending ? " ↑" : " ↓") : ""}</button></th>)}<th className="p-3">Inspect</th>
     </tr></thead><tbody>{visible.map((row) => <tr key={row.ticker} className="border-b border-[var(--border)] align-top last:border-0">
       <td className="p-3 font-semibold">{row.rank}</td>
-      <td className="p-3 font-bold"><Link className="focus-ring rounded text-[var(--accent)] hover:underline" href={`/stocks/${row.ticker}`}>{row.ticker}</Link>{row.isMock && <span className="mt-1 block w-fit rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold warning">MOCK SCORE</span>}</td>
+      <td className="p-3 font-bold"><Link className="focus-ring rounded text-[var(--accent)] hover:underline" href={`/stocks/${row.ticker}`}>{row.ticker}</Link><span className={`mt-1 block w-fit rounded px-1.5 py-0.5 text-[10px] font-semibold ${row.isMock ? "bg-amber-500/15 warning" : "bg-blue-500/10 text-[var(--accent)]"}`}>{row.isMock ? "MOCK SCORE" : `${row.dataType} SCORE`}</span></td>
       <td className="p-3"><span className="font-medium">{row.name}</span><span className="mt-1 block text-xs muted">{row.sector}</span></td>
       <td className="p-3"><strong>{row.totalScore.toFixed(1)}/100</strong><span className="mt-1 block max-w-36 text-xs muted">{scoreLabel(row.totalScore)}</span></td>
       <td className="p-3"><strong>{formatCurrency(row.currentPrice)}</strong><span className="mt-1 block text-xs muted">Previous close {formatCurrency(row.previousClose)}</span><span className="block text-xs muted">{marketLabel(row.marketStatus)} · {row.dataType.toLowerCase()}</span></td>
