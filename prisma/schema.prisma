@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WatchlistStatus {
+  RESEARCHING
+  WATCHING
+  READY_TO_BUY
+  OWNED
+  AVOID
+}
+
+enum PeriodType {
+  ANNUAL
+  QUARTERLY
+}
+
+enum MarketStatus {
+  PRE_MARKET
+  OPEN
+  AFTER_HOURS
+  CLOSED
+  UNKNOWN
+}
+
+model Company {
+  id                 String              @id @default(cuid())
+  ticker             String              @unique
+  name               String
+  sector             String
+  industry           String
+  description        String              @db.Text
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  watchlistItem      WatchlistItem?
+  marketSnapshots    MarketSnapshot[]
+  financialPeriods   FinancialPeriod[]
+  valuationSnapshots ValuationSnapshot[]
+  researchScores     ResearchScore[]
+}
+
+model WatchlistItem {
+  id            String          @id @default(cuid())
+  companyId     String          @unique
+  addedAt       DateTime        @default(now())
+  personalNotes String?         @db.Text
+  targetPrice   Decimal?        @db.Decimal(18, 4)
+  status        WatchlistStatus @default(RESEARCHING)
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model MarketSnapshot {
+  id                       String   @id @default(cuid())
+  companyId                String
+  timestamp                DateTime
+  price                    Decimal? @db.Decimal(18, 4)
+  previousClose            Decimal? @db.Decimal(18, 4)
+  currentPrice             Decimal? @db.Decimal(18, 4)
+  dailyChangeAmount        Decimal? @db.Decimal(18, 4)
+  dailyChangePercent       Decimal? @db.Decimal(12, 8)
+  marketStatus             MarketStatus @default(UNKNOWN)
+  priceTimestamp           DateTime
+  marketCap                Decimal? @db.Decimal(24, 2)
+  volume                   BigInt?
+  fiftyTwoWeekHigh         Decimal? @db.Decimal(18, 4)
+  fiftyTwoWeekLow          Decimal? @db.Decimal(18, 4)
+  fiftyDayMovingAverage    Decimal? @db.Decimal(18, 4)
+  twoHundredDayMovingAverage Decimal? @db.Decimal(18, 4)
+  company                  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId, timestamp])
+}
+
+model FinancialPeriod {
+  id                String     @id @default(cuid())
+  companyId         String
+  periodEnd         DateTime
+  periodType        PeriodType
+  revenue           Decimal?   @db.Decimal(24, 2)
+  operatingIncome   Decimal?   @db.Decimal(24, 2)
+  netIncome         Decimal?   @db.Decimal(24, 2)
+  freeCashFlow      Decimal?   @db.Decimal(24, 2)
+  cash              Decimal?   @db.Decimal(24, 2)
+  debt              Decimal?   @db.Decimal(24, 2)
+  sharesOutstanding Decimal?   @db.Decimal(24, 2)
+  grossMargin       Decimal?   @db.Decimal(12, 8)
+  operatingMargin   Decimal?   @db.Decimal(12, 8)
+  netMargin         Decimal?   @db.Decimal(12, 8)
+  source            String
+  retrievedAt       DateTime
+  company           Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@unique([companyId, periodEnd, periodType])
+}
+
+model ValuationSnapshot {
+  id                  String   @id @default(cuid())
+  companyId           String
+  timestamp           DateTime
+  trailingPE          Decimal? @db.Decimal(18, 4)
+  forwardPE           Decimal? @db.Decimal(18, 4)
+  priceToSales        Decimal? @db.Decimal(18, 4)
+  priceToFreeCashFlow Decimal? @db.Decimal(18, 4)
+  evToEbitda          Decimal? @db.Decimal(18, 4)
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId, timestamp])
+}
+
+model ResearchScore {
+  id                    String   @id @default(cuid())
+  companyId             String
+  calculatedAt          DateTime @default(now())
+  growthScore           Decimal  @db.Decimal(6, 2)
+  profitabilityScore    Decimal  @db.Decimal(6, 2)
+  balanceSheetScore     Decimal  @db.Decimal(6, 2)
+  valuationScore        Decimal  @db.Decimal(6, 2)
+  momentumScore         Decimal  @db.Decimal(6, 2)
+  dataCompletenessScore Decimal  @db.Decimal(6, 2)
+  totalScore            Decimal  @db.Decimal(6, 2)
+  explanation           Json
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([companyId, calculatedAt])
+}
