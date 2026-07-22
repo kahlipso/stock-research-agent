@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Local Stock Research Dashboard
 
 A local Streamlit prototype for comparing a personal stock watchlist with Yahoo Finance data through `yfinance`. It shows market performance, company fundamentals, moving averages, valuation metrics, missing-data warnings, and a deterministic 0–100 research score.
@@ -53,3 +54,6 @@ The dashboard's **Scoring methodology** panel states every threshold and interpo
 
 Every company view displays the last price observation date, UTC retrieval timestamp, and source. Prices and derived moving averages/returns come from downloaded history. Fundamental and valuation fields are the latest values returned by Yahoo Finance through `yfinance`; their underlying statement dates may differ.
 
+=======
+# stock-research-agent
+>>>>>>> 51453eae793196f81ee43ea5cab58518aa42e957
