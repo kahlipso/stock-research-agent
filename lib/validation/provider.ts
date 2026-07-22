@@ -8,7 +8,8 @@ const timestamp = z.string().refine((value) => Number.isFinite(Date.parse(value)
 
 export const companyProfileSchema = z.object({
   ...provenance, ticker: z.string().min(1), name: z.string().min(1), sector: z.string().min(1),
-  industry: z.string().min(1), description: z.string().min(1),
+  industry: z.string().min(1), description: z.string().min(1), exchange: z.string().nullable(),
+  country: z.string().nullable(), currency: z.string().nullable(), securityType: z.string().nullable(),
 });
 export const marketSnapshotSchema = z.object({
   ...provenance, ticker: z.string().min(1), previousClose: nullableFinite, currentPrice: nullableFinite,

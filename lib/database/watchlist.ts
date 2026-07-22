@@ -10,8 +10,8 @@ export async function addWatchlistTicker(ticker: string) {
   const profile = await marketDataProvider.getCompanyProfile(ticker);
   const company = await prisma.company.upsert({
     where: { ticker: profile.ticker },
-    update: { name: profile.name, sector: profile.sector, industry: profile.industry, description: profile.description },
-    create: { ticker: profile.ticker, name: profile.name, sector: profile.sector, industry: profile.industry, description: profile.description },
+    update: { name: profile.name, sector: profile.sector, industry: profile.industry, description: profile.description, exchange: profile.exchange, country: profile.country, currency: profile.currency, securityType: profile.securityType },
+    create: { ticker: profile.ticker, name: profile.name, sector: profile.sector, industry: profile.industry, description: profile.description, exchange: profile.exchange, country: profile.country, currency: profile.currency, securityType: profile.securityType },
   });
   return prisma.watchlistItem.upsert({ where: { companyId: company.id }, update: {}, create: { companyId: company.id } });
 }

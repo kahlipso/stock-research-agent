@@ -19,7 +19,7 @@ export class MockMarketDataProvider implements MarketDataProvider {
   }
   async getCompanyProfile(ticker: string) {
     const c = this.company(ticker);
-    return companyProfileSchema.parse({ ...MOCK_META, ticker: c.ticker, name: c.name, sector: c.sector, industry: c.industry, description: c.description });
+    return companyProfileSchema.parse({ ...MOCK_META, ticker: c.ticker, name: c.name, sector: c.sector, industry: c.industry, description: c.description, exchange: "MOCK", country: "US", currency: "USD", securityType: "COMMON_STOCK" });
   }
   async getMarketSnapshot(ticker: string) {
     const c = this.company(ticker);

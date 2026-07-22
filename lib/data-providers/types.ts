@@ -6,6 +6,7 @@ export type MarketStatus = (typeof MARKET_STATUSES)[number];
 export type DataProvenance = { source: string; retrievedAt: string; isMock: boolean };
 export type CompanyProfile = DataProvenance & {
   ticker: string; name: string; sector: string; industry: string; description: string;
+  exchange: string | null; country: string | null; currency: string | null; securityType: string | null;
 };
 export type MarketSnapshotData = DataProvenance & {
   ticker: string; previousClose: number | null; currentPrice: number | null;

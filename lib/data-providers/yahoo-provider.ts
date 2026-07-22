@@ -65,10 +65,12 @@ export class YahooMarketDataProvider implements MarketDataProvider {
   }
   async getCompanyProfile(ticker: string) {
     const { result, retrievedAt } = await this.summary(ticker);
-    const name = result.price?.longName ?? result.price?.shortName; const profile = result.summaryProfile;
+    const price = result.price; const name = price?.longName ?? price?.shortName; const profile = result.summaryProfile;
     if (!name || !profile?.sector || !profile.industry || !profile.longBusinessSummary) throw new Error(`Yahoo Finance did not return a complete company profile for ${ticker.toUpperCase()}`);
     return companyProfileSchema.parse({ source: SOURCE, retrievedAt, isMock: false, ticker: ticker.toUpperCase(), name,
-      sector: profile.sector, industry: profile.industry, description: profile.longBusinessSummary });
+      sector: profile.sector, industry: profile.industry, description: profile.longBusinessSummary,
+      exchange: price?.exchangeName ?? null, country: ["NMS","NYQ","NGM","NCM","PCX","ASE","BTS"].includes(price?.exchange ?? "") ? "US" : profile.country ?? null,
+      currency: price?.currency ?? null, securityType: price?.quoteType === "EQUITY" ? "COMMON_STOCK" : price?.quoteType ?? null });
   }
   async getMarketSnapshot(ticker: string) {
     const { result, retrievedAt } = await this.summary(ticker); const price = result.price; const detail = result.summaryDetail;

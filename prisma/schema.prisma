@@ -93,6 +93,11 @@ model MarketSnapshot {
   fiftyTwoWeekLow            Decimal?     @db.Decimal(18, 4)
   fiftyDayMovingAverage      Decimal?     @db.Decimal(18, 4)
   twoHundredDayMovingAverage Decimal?     @db.Decimal(18, 4)
+  provider                   String?
+  sourceIdentifier           String?
+  retrievedAt                DateTime?
+  effectiveAt                DateTime?
+  isMock                     Boolean      @default(false)
   company                    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId, timestamp])
@@ -333,6 +338,7 @@ model FactorScoreSnapshot {
   companyId            String
   asOfDate             DateTime
   modelVersionId       String
+  modelCalculationRunId String?
   universeRuleVersion  String
   qualityScore         Decimal?           @db.Decimal(8, 4)
   valueScore           Decimal?           @db.Decimal(8, 4)
@@ -365,9 +371,11 @@ model FactorScoreSnapshot {
   isMock               Boolean            @default(false)
   company              Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   modelVersion         FactorModelVersion @relation(fields: [modelVersionId], references: [id])
+  modelCalculationRun  ModelCalculationRun? @relation(fields: [modelCalculationRunId], references: [id])
 
   @@unique([companyId, asOfDate, modelVersionId])
   @@index([asOfDate, alphaScore])
+  @@index([modelCalculationRunId])
 }
 
 model RiskMetricSnapshot {
@@ -432,6 +440,7 @@ model ModelCalculationRun {
   metadata            Json?
   modelVersion        FactorModelVersion @relation(fields: [modelVersionId], references: [id])
   failures            ModelCalculationFailure[]
+  scores              FactorScoreSnapshot[]
   @@index([asOfDate, status])
   @@index([modelVersionId, asOfDate])
 }

@@ -7,4 +7,5 @@ describe("research features and time integrity", () => {
   it("rejects near-zero denominators and loss-to-loss EPS growth",()=>{expect(ratio(1,0)).toBeNull();expect(ratio(1,1e-12)).toBeNull();expect(safeEpsGrowth(-1,-2)).toBeNull()});
   it("does not treat financial-company leverage as ordinary industrial leverage",()=>expect(isApplicable(FEATURE_BY_KEY.get("net_debt_to_ebitda")!,"COMMON_STOCK","Banks")).toBe(false));
   it("requires adjusted observations for longer momentum windows",()=>expect(momentumFeatures(Array(125).fill(100)).momentum_6_1).toBeNull());
+  it("uses five sessions for short-term reversal rather than duplicating one-month return",()=>{const prices=Array.from({length:30},(_,index)=>100+index);expect(momentumFeatures(prices).short_term_reversal).toBeCloseTo(129/124-1);expect(momentumFeatures(prices).short_term_reversal).not.toBe(momentumFeatures(prices).return_1m)});
 });

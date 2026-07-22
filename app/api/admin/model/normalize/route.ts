@@ -1,2 +1,2 @@
-import { NextResponse } from "next/server";import { z } from "zod";import { apiError } from "@/lib/api-response";import { adminAuthorized } from "@/lib/auth/admin";import { normalizeFeatures } from "@/lib/research/engine";
-const body=z.object({asOfDate:z.string().date()}).strict();export async function POST(r:Request){if(!adminAuthorized(r))return apiError("UNAUTHORIZED","Unauthorized.",401);try{const x=body.parse(await r.json());return NextResponse.json({data:await normalizeFeatures(new Date(`${x.asOfDate}T00:00:00Z`))},{status:202})}catch{return apiError("INVALID_REQUEST","Invalid request.",400)}}
+import { apiError } from "@/lib/api-response";import { adminAuthorized } from "@/lib/auth/admin";
+export async function POST(r:Request){if(!adminAuthorized(r))return apiError("UNAUTHORIZED","Unauthorized.",401);return apiError("WORKER_REQUIRED","Normalization must run in the durable research worker.",409)}

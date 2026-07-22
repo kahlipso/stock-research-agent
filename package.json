@@ -14,12 +14,14 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx --env-file=.env.local prisma/seed.ts",
+    "ingest:security-master": "tsx --env-file=.env.local scripts/research.ts security-master",
     "ingest:prices": "tsx --env-file=.env.local scripts/research.ts prices",
     "ingest:fundamentals": "tsx --env-file=.env.local scripts/research.ts fundamentals",
     "calculate:features": "tsx --env-file=.env.local scripts/research.ts features",
     "normalize:features": "tsx --env-file=.env.local scripts/research.ts normalize",
     "calculate:factors": "tsx --env-file=.env.local scripts/research.ts factors",
-    "calculate:daily-model": "tsx --env-file=.env.local scripts/research.ts daily"
+    "calculate:daily-model": "tsx --env-file=.env.local scripts/research.ts daily",
+    "verify:numerics": "tsx --env-file=.env.local scripts/verify-numerics.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",

@@ -4,7 +4,9 @@ import { yahooMarketDataProvider } from "./yahoo-provider";
 
 export type MarketDataProviderName = "mock" | "yahoo";
 export function configuredProviderName(): MarketDataProviderName {
-  const value = (process.env.MARKET_DATA_PROVIDER ?? "mock").trim().toLowerCase();
+  const configured = process.env.MARKET_DATA_PROVIDER;
+  if (!configured && process.env.NODE_ENV === "production") throw new Error("MARKET_DATA_PROVIDER is required in production");
+  const value = (configured ?? "mock").trim().toLowerCase();
   if (value === "mock" || value === "yahoo") return value;
   throw new Error(`Unsupported MARKET_DATA_PROVIDER: ${value}`);
 }
