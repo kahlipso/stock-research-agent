@@ -16,7 +16,9 @@
     "ingest:prices": "tsx --env-file=.env.local scripts/research.ts prices",
     "ingest:fundamentals": "tsx --env-file=.env.local scripts/research.ts fundamentals",
     "calculate:features": "tsx --env-file=.env.local scripts/research.ts features",
-    "calculate:factors": "tsx --env-file=.env.local scripts/research.ts factors"
+    "normalize:features": "tsx --env-file=.env.local scripts/research.ts normalize",
+    "calculate:factors": "tsx --env-file=.env.local scripts/research.ts factors",
+    "calculate:daily-model": "tsx --env-file=.env.local scripts/research.ts daily"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",

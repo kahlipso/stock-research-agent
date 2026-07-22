@@ -18,7 +18,7 @@ export const marketSnapshotSchema = z.object({
   marketCap: nullableFinite, volume: nullableFinite, fiftyTwoWeekHigh: nullableFinite,
   fiftyTwoWeekLow: nullableFinite, fiftyDayMovingAverage: nullableFinite, twoHundredDayMovingAverage: nullableFinite,
 });
-export const pricePointSchema = z.object({ ...provenance, timestamp, price: z.number().finite() });
+export const pricePointSchema = z.object({ ...provenance, timestamp, price: z.number().finite(), open:nullableFinite.optional(),high:nullableFinite.optional(),low:nullableFinite.optional(),close:nullableFinite.optional(),adjustedClose:nullableFinite.optional(),volume:nullableFinite.optional() });
 export const financialPeriodSchema = z.object({
   ...provenance, ticker: z.string().min(1), periodEnd: z.string().min(1), periodType: z.enum(["ANNUAL", "QUARTERLY"]),
   revenue: nullableFinite, operatingIncome: nullableFinite, netIncome: nullableFinite, freeCashFlow: nullableFinite,

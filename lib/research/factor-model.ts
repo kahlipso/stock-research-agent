@@ -1,42 +1,12 @@
-import { MODEL_V0 } from "./config";
-
-export type FactorName = keyof typeof MODEL_V0.weights;
-export type Contribution = { featureKey: string; factor: FactorName; percentile: number | null; weight: number; dataAsOf?: string };
-
-export function scoreFactor(contributions: Contribution[], minimumCompleteness = MODEL_V0.minimumFactorCompleteness) {
-  const available = contributions.filter((item): item is Contribution & { percentile: number } => item.percentile != null && Number.isFinite(item.percentile));
-  const completeness = contributions.length ? available.length / contributions.length : 0;
-  if (completeness < minimumCompleteness || !available.length) return { score: null, completeness, contributions: available };
-  const totalWeight = available.reduce((sum, item) => sum + item.weight, 0);
-  const score = available.reduce((sum, item) => sum + item.percentile * item.weight / totalWeight, 0);
-  return { score, completeness, contributions: available };
-}
-
-export function aggregateAlpha(factors: Partial<Record<FactorName, number | null>>) {
-  const required = Object.keys(MODEL_V0.weights) as FactorName[];
-  if (required.some((key) => factors[key] == null)) return { alphaScore: null, effectiveWeights: {} };
-  const alphaScore = required.reduce((sum, key) => sum + Number(factors[key]) * MODEL_V0.weights[key], 0);
-  return { alphaScore, effectiveWeights: { ...MODEL_V0.weights } };
-}
-
-export function confidenceScore(input: { featureCompleteness: number; freshness: number; providerConsistency: number; peerSample: number; factorCompleteness: number; filingFreshness: number; priceFreshness: number }) {
-  const weights = { featureCompleteness: .30, freshness: .10, providerConsistency: .10, peerSample: .10, factorCompleteness: .20, filingFreshness: .10, priceFreshness: .10 };
-  return Math.max(0, Math.min(100, Object.entries(weights).reduce((sum, [key, weight]) => sum + input[key as keyof typeof input] * weight, 0)));
-}
-
-export function candidateBand(percentile: number | null, eligible = true, sufficient = true) {
-  if (!eligible) return "INELIGIBLE";
-  if (!sufficient || percentile == null) return "INSUFFICIENT_DATA";
-  if (percentile >= .90) return "CANDIDATE";
-  if (percentile >= .80) return "HOLD_RANGE";
-  if (percentile < .70) return "EXIT_RANGE";
-  return "NEUTRAL";
-}
-
-export type Rankable = { ticker: string; alphaScore: number | null; confidenceScore: number | null; liquidityScore: number | null; eligible: boolean };
-export const compareRankings = (a: Rankable, b: Rankable) => Number(b.eligible) - Number(a.eligible)
-  || (b.alphaScore ?? -1) - (a.alphaScore ?? -1)
-  || (b.confidenceScore ?? -1) - (a.confidenceScore ?? -1)
-  || (b.liquidityScore ?? -1) - (a.liquidityScore ?? -1)
-  || a.ticker.localeCompare(b.ticker);
-
+import { MODEL_V0, type FactorKey, type FactorModelConfiguration, validateModelConfiguration } from "./config";
+export type FactorName=FactorKey;
+export type Contribution={featureKey:string;factor:FactorName;percentile:number|null;weight:number;dataAsOf?:string;rawValue?:number|null;peerGroup?:string;warnings?:string[]};
+export function scoreFactor(contributions:Contribution[],minimumCoverage?:number){const configured=contributions.reduce((s,x)=>s+x.weight,0);const available=contributions.filter((x):x is Contribution&{percentile:number}=>x.percentile!=null&&Number.isFinite(x.percentile));const covered=available.reduce((s,x)=>s+x.weight,0);const completeness=configured?covered/configured:0;if(completeness<(minimumCoverage??.6)||!covered)return{score:null,completeness,effectiveWeights:{},contributions:available};const effectiveWeights=Object.fromEntries(available.map(x=>[x.featureKey,x.weight/covered]));const score=available.reduce((s,x)=>s+x.percentile*100*(x.weight/covered),0);return{score,completeness,effectiveWeights,contributions:available.map(x=>({...x,effectiveWeight:x.weight/covered,scoreContribution:x.percentile*100*(x.weight/covered)}))};}
+export function aggregateAlpha(factors:Partial<Record<FactorName,number|null>>,coverage:Partial<Record<FactorName,number>>={},config:FactorModelConfiguration=MODEL_V0){validateModelConfiguration(config);const keys=Object.keys(config.factorWeights) as FactorName[];const overall=keys.reduce((s,k)=>s+(coverage[k]??(factors[k]!=null?1:0))*config.factorWeights[k],0);if(overall<config.minimumOverallCoverage||keys.some(k=>factors[k]==null))return{alphaScore:null,effectiveWeights:{},overallCoverage:overall};return{alphaScore:keys.reduce((s,k)=>s+Number(factors[k])*config.factorWeights[k],0),effectiveWeights:{...config.factorWeights},overallCoverage:overall};}
+export type ConfidenceInput={featureCompleteness:number;freshness:number;providerConsistency:number;peerSample:number;factorCompleteness:number;filingFreshness:number;priceFreshness:number;classification?:number;warningPenalty?:number;restatementPenalty?:number};
+export function confidenceScore(i:ConfidenceInput){const score=i.featureCompleteness*.25+i.factorCompleteness*.20+i.priceFreshness*.12+i.filingFreshness*.12+i.providerConsistency*.10+i.peerSample*.10+i.freshness*.06+(i.classification??100)*.05-(i.warningPenalty??0)-(i.restatementPenalty??0);return Math.max(0,Math.min(100,score));}
+export const confidenceClassification=(score:number|null)=>score==null||score<50?"INSUFFICIENT":score<70?"WEAK":score<85?"ACCEPTABLE":"STRONG";
+export function candidateBand(percentile:number|null,eligible=true,sufficient=true){if(!eligible)return"INELIGIBLE";if(!sufficient||percentile==null)return"INSUFFICIENT_DATA";if(percentile>=.90)return"CANDIDATE";if(percentile>=.80)return"HOLD_RANGE";if(percentile>=.30)return"NEUTRAL";return"WEAK_SIGNAL";}
+export type Rankable={ticker:string;alphaScore:number|null;confidenceScore:number|null;liquidityScore:number|null;eligible:boolean};
+export const compareRankings=(a:Rankable,b:Rankable)=>Number(b.eligible)-Number(a.eligible)||(b.alphaScore??-1)-(a.alphaScore??-1)||(b.confidenceScore??-1)-(a.confidenceScore??-1)||(b.liquidityScore??-1)-(a.liquidityScore??-1)||a.ticker.localeCompare(b.ticker);
+export function percentileRanks<T>(items:T[],value:(x:T)=>number|null){const available=items.filter(x=>value(x)!=null).sort((a,b)=>Number(value(a))-Number(value(b)));return new Map(available.map((x)=>{const v=value(x)!;const equal=available.filter(y=>value(y)===v);const less=available.filter(y=>Number(value(y))<v).length;return[x,available.length===1?.5:(less+(equal.length-1)/2)/(available.length-1)]}));}

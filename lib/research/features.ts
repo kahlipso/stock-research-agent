@@ -1,67 +1,22 @@
-export type Direction = "HIGHER_IS_BETTER" | "LOWER_IS_BETTER";
-export type FeatureDefinition = {
-  key: string; factor: "quality" | "value" | "growth" | "momentum" | "revisions";
-  direction: Direction; minimumHistoryDays?: number; applicable?: "NON_FINANCIAL" | "ALL";
-};
-
-export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
-  { key: "gross_profitability", factor: "quality", direction: "HIGHER_IS_BETTER", applicable: "NON_FINANCIAL" },
-  { key: "gross_margin", factor: "quality", direction: "HIGHER_IS_BETTER" },
-  { key: "operating_margin", factor: "quality", direction: "HIGHER_IS_BETTER" },
-  { key: "net_margin", factor: "quality", direction: "HIGHER_IS_BETTER" },
-  { key: "fcf_margin", factor: "quality", direction: "HIGHER_IS_BETTER" },
-  { key: "roa", factor: "quality", direction: "HIGHER_IS_BETTER" },
-  { key: "ocf_to_net_income", factor: "quality", direction: "HIGHER_IS_BETTER" },
-  { key: "accruals_ratio", factor: "quality", direction: "LOWER_IS_BETTER" },
-  { key: "net_debt_to_ebitda", factor: "quality", direction: "LOWER_IS_BETTER", applicable: "NON_FINANCIAL" },
-  { key: "interest_coverage", factor: "quality", direction: "HIGHER_IS_BETTER", applicable: "NON_FINANCIAL" },
-  { key: "share_dilution_1y", factor: "quality", direction: "LOWER_IS_BETTER" },
-  { key: "earnings_yield", factor: "value", direction: "HIGHER_IS_BETTER" },
-  { key: "fcf_yield", factor: "value", direction: "HIGHER_IS_BETTER" },
-  { key: "ebit_to_ev", factor: "value", direction: "HIGHER_IS_BETTER", applicable: "NON_FINANCIAL" },
-  { key: "sales_to_ev", factor: "value", direction: "HIGHER_IS_BETTER", applicable: "NON_FINANCIAL" },
-  { key: "book_to_market", factor: "value", direction: "HIGHER_IS_BETTER" },
-  { key: "revenue_growth_1y", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "revenue_cagr_3y", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "eps_growth_1y", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "eps_cagr_3y", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "fcf_growth_1y", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "gross_margin_change", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "operating_margin_change", factor: "growth", direction: "HIGHER_IS_BETTER" },
-  { key: "momentum_12_1", factor: "momentum", direction: "HIGHER_IS_BETTER", minimumHistoryDays: 252 },
-  { key: "momentum_6_1", factor: "momentum", direction: "HIGHER_IS_BETTER", minimumHistoryDays: 126 },
-  { key: "return_3m", factor: "momentum", direction: "HIGHER_IS_BETTER", minimumHistoryDays: 63 },
-  { key: "return_1m", factor: "momentum", direction: "HIGHER_IS_BETTER", minimumHistoryDays: 21 },
-  { key: "distance_200dma", factor: "momentum", direction: "HIGHER_IS_BETTER", minimumHistoryDays: 200 },
-  { key: "distance_52w_high", factor: "momentum", direction: "HIGHER_IS_BETTER", minimumHistoryDays: 252 },
-  { key: "short_term_reversal", factor: "momentum", direction: "LOWER_IS_BETTER", minimumHistoryDays: 5 },
-];
-
-export const safeGrowth = (current: number | null, prior: number | null) =>
-  current == null || prior == null || prior === 0 ? null : current / Math.abs(prior) - Math.sign(prior);
-
-export const safeCagr = (current: number | null, base: number | null, years: number) =>
-  current == null || base == null || current <= 0 || base <= 0 || years <= 0 ? null : Math.pow(current / base, 1 / years) - 1;
-
-export const ratio = (numerator: number | null, denominator: number | null) =>
-  numerator == null || denominator == null || denominator === 0 ? null : numerator / denominator;
-
-export function priceReturn(prices: number[], endOffset: number, startOffset: number) {
-  const end = prices.at(-(endOffset + 1)); const start = prices.at(-(startOffset + 1));
-  return end == null || start == null || start <= 0 ? null : end / start - 1;
-}
-
-export function momentumFeatures(adjustedCloses: number[]) {
-  return {
-    momentum_12_1: priceReturn(adjustedCloses, 21, 252),
-    momentum_6_1: priceReturn(adjustedCloses, 21, 126),
-    return_3m: priceReturn(adjustedCloses, 0, 63),
-    return_1m: priceReturn(adjustedCloses, 0, 21),
-    short_term_reversal: priceReturn(adjustedCloses, 0, 5),
-  };
-}
-
-export function availableAsOf<T extends { publishedAt: Date; retrievedAt: Date }>(rows: T[], asOf: Date) {
-  return rows.filter((row) => row.publishedAt <= asOf && row.retrievedAt <= asOf);
-}
-
+export type FeatureFactor = "QUALITY"|"GROWTH"|"VALUE"|"MOMENTUM"|"RISK";
+export type Direction = "HIGHER_IS_BETTER"|"LOWER_IS_BETTER"|"NEUTRAL";
+export type FeatureDefinition = { key:string;name:string;description:string;factor:FeatureFactor;direction:Direction;unit:string;minimumHistoryDays?:number;minimumPeriods?:number;applicableSecurityTypes?:string[];applicableIndustries?:string[];excludedIndustries?:string[];formulaVersion:string;missingDataPolicy:"SKIP"|"INELIGIBLE"|"LOWER_CONFIDENCE" };
+const financialIndustries=["Banks","Insurance","Capital Markets","Mortgage Finance","Financial Services"];
+const f=(key:string,name:string,factor:FeatureFactor,direction:Direction,unit="ratio",extra:Partial<FeatureDefinition>={}):FeatureDefinition=>({key,name,description:name,factor,direction,unit,formulaVersion:"1.0.0",missingDataPolicy:"LOWER_CONFIDENCE",...extra});
+export const FEATURE_REGISTRY = [
+ f("gross_margin","Gross margin","QUALITY","HIGHER_IS_BETTER"),f("operating_margin","Operating margin","QUALITY","HIGHER_IS_BETTER"),f("net_margin","Net margin","QUALITY","HIGHER_IS_BETTER"),f("fcf_margin","Free-cash-flow margin","QUALITY","HIGHER_IS_BETTER"),f("roa","Return on assets","QUALITY","HIGHER_IS_BETTER"),f("roe","Return on equity","QUALITY","HIGHER_IS_BETTER"),f("roic_approx","Approximate ROIC","QUALITY","HIGHER_IS_BETTER","ratio",{excludedIndustries:financialIndustries}),f("gross_profitability","Gross profit / assets","QUALITY","HIGHER_IS_BETTER","ratio",{excludedIndustries:financialIndustries}),f("ocf_to_net_income","Operating cash flow / net income","QUALITY","HIGHER_IS_BETTER"),f("fcf_to_net_income","Free cash flow / net income","QUALITY","HIGHER_IS_BETTER"),f("accruals_ratio","Accruals ratio","QUALITY","LOWER_IS_BETTER"),f("net_debt_to_ebitda","Net debt / EBITDA","QUALITY","LOWER_IS_BETTER","multiple",{excludedIndustries:financialIndustries}),f("debt_to_equity","Debt / equity","QUALITY","LOWER_IS_BETTER","multiple",{excludedIndustries:financialIndustries}),f("interest_coverage","Interest coverage","QUALITY","HIGHER_IS_BETTER","multiple",{excludedIndustries:financialIndustries}),f("operating_margin_stability_3y","Operating-margin stability","QUALITY","LOWER_IS_BETTER","standard deviation",{minimumPeriods:3}),f("earnings_stability_3y","Earnings stability","QUALITY","LOWER_IS_BETTER","standard deviation",{minimumPeriods:3}),f("share_change_1y","One-year share-count change","QUALITY","LOWER_IS_BETTER"),f("share_change_3y","Three-year share-count change","QUALITY","LOWER_IS_BETTER", "ratio",{minimumPeriods:4}),
+ f("revenue_growth_1y","One-year revenue growth","GROWTH","HIGHER_IS_BETTER"),f("revenue_cagr_3y","Three-year revenue CAGR","GROWTH","HIGHER_IS_BETTER","ratio",{minimumPeriods:4}),f("eps_growth_1y","One-year EPS growth","GROWTH","HIGHER_IS_BETTER"),f("eps_cagr_3y","Three-year EPS CAGR","GROWTH","HIGHER_IS_BETTER","ratio",{minimumPeriods:4}),f("fcf_growth_1y","One-year free-cash-flow growth","GROWTH","HIGHER_IS_BETTER"),f("fcf_cagr_3y","Three-year free-cash-flow CAGR","GROWTH","HIGHER_IS_BETTER","ratio",{minimumPeriods:4}),f("revenue_growth_acceleration","Revenue-growth acceleration","GROWTH","HIGHER_IS_BETTER"),f("eps_growth_acceleration","EPS-growth acceleration","GROWTH","HIGHER_IS_BETTER"),f("gross_margin_change","Gross-margin change","GROWTH","HIGHER_IS_BETTER","percentage points"),f("operating_margin_change","Operating-margin change","GROWTH","HIGHER_IS_BETTER","percentage points"),f("fcf_margin_change","FCF-margin change","GROWTH","HIGHER_IS_BETTER","percentage points"),
+ f("earnings_yield","Earnings yield","VALUE","HIGHER_IS_BETTER"),f("fcf_yield","Free-cash-flow yield","VALUE","HIGHER_IS_BETTER"),f("ebit_to_ev","EBIT / enterprise value","VALUE","HIGHER_IS_BETTER","ratio",{excludedIndustries:financialIndustries}),f("ebitda_to_ev","EBITDA / enterprise value","VALUE","HIGHER_IS_BETTER","ratio",{excludedIndustries:financialIndustries}),f("sales_to_ev","Sales / enterprise value","VALUE","HIGHER_IS_BETTER","ratio",{excludedIndustries:financialIndustries}),f("book_to_market","Book-to-market","VALUE","HIGHER_IS_BETTER"),f("shareholder_yield","Shareholder yield","VALUE","HIGHER_IS_BETTER"),f("historical_valuation_percentile","Historical valuation percentile","VALUE","HIGHER_IS_BETTER","percentile",{minimumHistoryDays:756}),
+ ...[["return_1m","One-month return",21],["return_3m","Three-month return",63],["momentum_6_1","Six-minus-one momentum",126],["momentum_12_1","Twelve-minus-one momentum",252],["relative_spy_6m","Six-month relative return vs SPY",126],["relative_qqq_6m","Six-month relative return vs QQQ",126],["relative_sector_6m","Six-month relative return vs sector benchmark",126],["vol_adjusted_6_1","Volatility-adjusted six-minus-one momentum",126],["vol_adjusted_12_1","Volatility-adjusted twelve-minus-one momentum",252],["distance_200dma","Distance from 200-day average",200],["distance_52w_high","Distance from 52-week high",252],["volume_trend","Volume trend",63]] .map(([key,name,days])=>f(String(key),String(name),"MOMENTUM","HIGHER_IS_BETTER","ratio",{minimumHistoryDays:Number(days)})),f("short_term_reversal","Short-term reversal","MOMENTUM","LOWER_IS_BETTER","ratio",{minimumHistoryDays:21}),
+ ...[["volatility_20d","20-day realized volatility",21],["volatility_60d","60-day realized volatility",61],["volatility_252d","252-day realized volatility",253],["downside_volatility","Downside volatility",63],["beta_spy","Beta versus SPY",126],["max_drawdown_1y","One-year maximum drawdown",252],["max_drawdown_3y","Three-year maximum drawdown",756],["atr_percent","ATR percentage",15],["largest_gap","Largest one-day gap",63],["gap_frequency","Recent gap frequency",63],["idiosyncratic_volatility","Idiosyncratic volatility",126],["correlation_spy","Correlation with SPY",126],["missing_bar_percent","Missing-price-bar percentage",63]].map(([key,name,days])=>f(String(key),String(name),"RISK","NEUTRAL","ratio",{minimumHistoryDays:Number(days)})),
+] as const satisfies readonly FeatureDefinition[];
+export const FEATURE_BY_KEY = new Map(FEATURE_REGISTRY.map(x=>[x.key,x]));
+export const isApplicable=(definition:FeatureDefinition,securityType:string|null,industry:string|null)=>!(definition.applicableSecurityTypes&&!definition.applicableSecurityTypes.includes(securityType??""))&&!(industry&&definition.excludedIndustries?.includes(industry))&&!(definition.applicableIndustries&&!definition.applicableIndustries.includes(industry??""));
+export const ratio=(n:number|null,d:number|null,epsilon=1e-9)=>n==null||d==null||Math.abs(d)<=epsilon?null:n/d;
+export const safeGrowth=(current:number|null,prior:number|null)=>current==null||prior==null||prior<=0||current<0?null:current/prior-1;
+export const safeEpsGrowth=(current:number|null,prior:number|null)=>current==null||prior==null||prior<=0||current<=0?null:current/prior-1;
+export const safeCagr=(current:number|null,base:number|null,years:number)=>current==null||base==null||current<=0||base<=0||years<=0?null:Math.pow(current/base,1/years)-1;
+export const priceReturn=(prices:number[],endOffset:number,startOffset:number)=>{const end=prices.at(-(endOffset+1)),start=prices.at(-(startOffset+1));return end==null||start==null||start<=0?null:end/start-1};
+export function momentumFeatures(prices:number[],volumes:number[]=[]){const ma=prices.slice(-200);const high=prices.slice(-252);const vol=annualizedVolatility(prices.slice(-127));const m61=priceReturn(prices,21,126),m121=priceReturn(prices,21,252);return {return_1m:priceReturn(prices,0,21),return_3m:priceReturn(prices,0,63),momentum_6_1:m61,momentum_12_1:m121,vol_adjusted_6_1:m61!=null&&vol?m61/vol:null,vol_adjusted_12_1:m121!=null&&vol?m121/vol:null,distance_200dma:ma.length===200?ratio(prices.at(-1)!,ma.reduce((a,b)=>a+b,0)/200)!-1:null,distance_52w_high:high.length===252?ratio(prices.at(-1)!,Math.max(...high))!-1:null,short_term_reversal:priceReturn(prices,0,21),volume_trend:volumes.length>=63?ratio(volumes.slice(-21).reduce((a,b)=>a+b,0)/21,volumes.slice(-63,-21).reduce((a,b)=>a+b,0)/42)!-1:null};}
+const annualizedVolatility=(prices:number[])=>{const rs=prices.slice(1).map((p,i)=>p/prices[i]-1);if(rs.length<2)return null;const m=rs.reduce((a,b)=>a+b,0)/rs.length;return Math.sqrt(rs.reduce((s,x)=>s+(x-m)**2,0)/(rs.length-1))*Math.sqrt(252)};
+export function availableAsOf<T extends {publishedAt:Date;retrievedAt:Date}>(rows:T[],asOf:Date){return rows.filter(row=>row.publishedAt<=asOf&&row.retrievedAt<=asOf)}

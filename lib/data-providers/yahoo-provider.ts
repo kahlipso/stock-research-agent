@@ -32,7 +32,7 @@ const rangeOptions: Record<PriceRange, { milliseconds: number; interval: "5m" | 
   "5D": { milliseconds: 5 * 24 * 60 * 60_000, interval: "30m", includePrePost: false },
   "1M": { milliseconds: 31 * 24 * 60 * 60_000, interval: "1d", includePrePost: false },
   "6M": { milliseconds: 183 * 24 * 60 * 60_000, interval: "1d", includePrePost: false },
-  "1Y": { milliseconds: 366 * 24 * 60 * 60_000, interval: "1d", includePrePost: false },
+  "1Y": { milliseconds: 400 * 24 * 60 * 60_000, interval: "1d", includePrePost: false },
   "5Y": { milliseconds: 5 * 366 * 24 * 60 * 60_000, interval: "1wk", includePrePost: false },
 };
 
@@ -44,6 +44,7 @@ async function loadHistory(ticker: string, range: PriceRange) {
   });
   const points = result.quotes.flatMap((quote) => quote.close === null ? [] : [{
     source: SOURCE, retrievedAt, isMock: false, timestamp: quote.date.toISOString(), price: quote.adjclose ?? quote.close,
+    open:quote.open,high:quote.high,low:quote.low,close:quote.close,adjustedClose:quote.adjclose ?? quote.close,volume:quote.volume,
   }]);
   return pricePointSchema.array().parse(normalizePriceHistory(points));
 }

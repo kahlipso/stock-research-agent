@@ -60,6 +60,7 @@ model Company {
   riskSnapshots       RiskMetricSnapshot[]
   liquiditySnapshots  LiquiditySnapshot[]
   analyses            AnalysisRecord[]
+  modelRunsFailed     ModelCalculationFailure[]
 
   @@index([sector])
   @@index([industry])
@@ -272,9 +273,14 @@ model FeatureSnapshot {
   featureKey   String
   value        Decimal?  @db.Decimal(30, 10)
   modelVersion String
+  formulaVersion String  @default("1.0.0")
   calculatedAt DateTime
   sourceAsOf   DateTime?
+  sourceAvailableAt DateTime?
+  provider     String?
   confidence   Decimal?  @db.Decimal(6, 4)
+  nullReason   String?
+  warnings     Json?
   metadata     Json?
   company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -288,6 +294,7 @@ model NormalizedFeatureSnapshot {
   asOfDate        DateTime
   featureKey      String
   modelVersion    String
+  normalizationVersion String @default("PERCENTILE_2_5_97_5_V1")
   rawValue        Decimal  @db.Decimal(30, 10)
   winsorizedValue Decimal  @db.Decimal(30, 10)
   normalizedValue Decimal  @db.Decimal(18, 10)
@@ -298,6 +305,7 @@ model NormalizedFeatureSnapshot {
   direction       String
   calculatedAt    DateTime
   metadata        Json?
+  warnings        Json?
   company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, asOfDate, featureKey, modelVersion])
@@ -315,6 +323,7 @@ model FactorModelVersion {
   active        Boolean               @default(false)
   createdAt     DateTime              @default(now())
   scores        FactorScoreSnapshot[]
+  calculationRuns ModelCalculationRun[]
 
   @@unique([modelKey, version])
 }
@@ -341,6 +350,14 @@ model FactorScoreSnapshot {
   calculatedAt         DateTime
   dataAsOf             DateTime
   priceAsOf            DateTime?
+  currentUniverseRank  Int?
+  currentSectorRank    Int?
+  currentIndustryRank  Int?
+  alphaChange1d        Decimal? @db.Decimal(8, 4)
+  alphaChange7d        Decimal? @db.Decimal(8, 4)
+  alphaChange30d       Decimal? @db.Decimal(8, 4)
+  rankChange1d         Int?
+  rankChange30d        Int?
   featureContributions Json
   factorContributions  Json
   effectiveWeights     Json
@@ -364,8 +381,14 @@ model RiskMetricSnapshot {
   downsideVolatility Decimal? @db.Decimal(18, 10)
   betaSpy            Decimal? @db.Decimal(18, 10)
   maximumDrawdown    Decimal? @db.Decimal(18, 10)
+  maximumDrawdown3y  Decimal? @db.Decimal(18, 10)
   atrPercent         Decimal? @db.Decimal(18, 10)
   gapRisk            Decimal? @db.Decimal(18, 10)
+  largestOneDayGap   Decimal? @db.Decimal(18, 10)
+  recentGapFrequency Decimal? @db.Decimal(18, 10)
+  idiosyncraticVolatility Decimal? @db.Decimal(18, 10)
+  correlationSpy     Decimal? @db.Decimal(18, 10)
+  missingBarPercent  Decimal? @db.Decimal(18, 10)
   riskScore          Decimal? @db.Decimal(8, 4)
   classification     String
   calculatedAt       DateTime
@@ -380,6 +403,8 @@ model LiquiditySnapshot {
   asOfDate                 DateTime
   medianDollarVolume       Decimal? @db.Decimal(30, 4)
   averageDailyVolume       Decimal? @db.Decimal(30, 4)
+  averageDollarVolume      Decimal? @db.Decimal(30, 4)
+  medianShareVolume        Decimal? @db.Decimal(30, 4)
   estimatedDaysToLiquidate Decimal? @db.Decimal(18, 8)
   price                    Decimal? @db.Decimal(20, 6)
   tradingHistoryDays       Int
@@ -390,6 +415,37 @@ model LiquiditySnapshot {
   company                  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, asOfDate])
+}
+
+model ModelCalculationRun {
+  id                  String   @id @default(cuid())
+  modelVersionId      String
+  asOfDate            DateTime
+  universeId          String
+  status              String
+  startedAt           DateTime
+  completedAt         DateTime?
+  securitiesEligible  Int      @default(0)
+  securitiesScored    Int      @default(0)
+  securitiesFailed    Int      @default(0)
+  errorSummary        String?
+  metadata            Json?
+  modelVersion        FactorModelVersion @relation(fields: [modelVersionId], references: [id])
+  failures            ModelCalculationFailure[]
+  @@index([asOfDate, status])
+  @@index([modelVersionId, asOfDate])
+}
+
+model ModelCalculationFailure {
+  id          String @id @default(cuid())
+  runId       String
+  companyId   String
+  stage       String
+  message     String
+  createdAt   DateTime @default(now())
+  run         ModelCalculationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@index([runId])
 }
 
 model DataIngestionRun {

@@ -15,7 +15,7 @@ export type MarketSnapshotData = DataProvenance & {
   fiftyTwoWeekLow: number | null; fiftyDayMovingAverage: number | null;
   twoHundredDayMovingAverage: number | null;
 };
-export type PricePoint = DataProvenance & { timestamp: string; price: number };
+export type PricePoint = DataProvenance & { timestamp: string; price: number; open?: number | null; high?: number | null; low?: number | null; close?: number | null; adjustedClose?: number | null; volume?: number | null };
 export type FinancialPeriodData = DataProvenance & {
   ticker: string; periodEnd: string; periodType: "ANNUAL" | "QUARTERLY";
   revenue: number | null; operatingIncome: number | null; netIncome: number | null;

@@ -1,0 +1,3 @@
+# Phase 2 limitations
+
+SEC company facts have taxonomy and period-alignment variation. The initial engine deliberately leaves unsupported fields null rather than guessing. FCF three-year CAGR, margin changes, shareholder yield, historical valuation, sector-relative momentum, idiosyncratic volatility and exchange-calendar missing-bar measurement require sufficiently aligned stored inputs and remain unavailable otherwise. Yahoo integration is unofficial; production use needs a licensed adjusted-price provider. Small universes fall back from industry to sector to universe and may have weak confidence. No synthetic history, AI scoring, backtesting, portfolio construction or trading exists.

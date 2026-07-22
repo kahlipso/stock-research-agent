@@ -1,0 +1,11 @@
+import {describe,expect,it} from "vitest";import {MODEL_V0,validateModelConfiguration} from "../lib/research/config";import {calculateLiquidity} from "../lib/research/liquidity";import {calculateRisk,maximumDrawdown,riskClassification,riskScoreFromMetrics,type Ohlcv} from "../lib/research/risk";import {scoreFactor,confidenceScore} from "../lib/research/factor-model";
+const bars=(count:number):Ohlcv[]=>Array.from({length:count},(_,i)=>({timestamp:new Date(2020,0,i+1),open:100+i/10,high:102+i/10,low:99+i/10,close:101+i/10,adjustedClose:101+i/10,volume:1_000_000}));
+describe("Phase 2 separation and numerical integrity",()=>{
+ it("validates all configured weights",()=>expect(validateModelConfiguration(MODEL_V0)).toBe(MODEL_V0));
+ it("stores effective feature weights that sum to one",()=>{const result=scoreFactor([{featureKey:"a",factor:"quality",percentile:.8,weight:.7},{featureKey:"b",factor:"quality",percentile:.2,weight:.3}],.5);expect(Object.values(result.effectiveWeights).reduce((a,b)=>a+b,0)).toBeCloseTo(1);expect(result.score).toBeCloseTo(62)});
+ it("reweights only available features after coverage succeeds",()=>{const result=scoreFactor([{featureKey:"a",factor:"value",percentile:1,weight:.6},{featureKey:"b",factor:"value",percentile:null,weight:.4}],.5);expect(result.score).toBe(100);expect(result.completeness).toBe(.6)});
+ it("keeps confidence penalties bounded and independent",()=>expect(confidenceScore({featureCompleteness:100,factorCompleteness:100,freshness:100,providerConsistency:100,peerSample:100,filingFreshness:100,priceFreshness:100,warningPenalty:200})).toBe(0));
+ it("calculates drawdown as a negative historical loss",()=>expect(maximumDrawdown([100,120,60,90])).toBe(-.5));
+ it("uses 0 as lowest and 100 as highest measured risk",()=>{const metrics=calculateRisk(bars(260));const score=riskScoreFromMetrics(metrics);expect(score).not.toBeNull();expect(score!).toBeGreaterThanOrEqual(0);expect(score!).toBeLessThanOrEqual(100);expect(riskClassification(90)).toBe("VERY_HIGH")});
+ it("keeps liquidity outside alpha and enforces price/history eligibility",()=>{expect(calculateLiquidity(bars(100)).classification).toBe("INELIGIBLE");expect(calculateLiquidity(bars(260)).medianDollarVolume).toBeGreaterThan(0)});
+});
